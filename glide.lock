@@ -1,0 +1,14 @@
+hash: 2f4a46a2fb62fd5e718ff4588fd658ae1d003c0ce0692e3a59078b4a1bf5b09b
+updated: 2016-05-31T19:22:53.272054026+02:00
+imports:
+- name: github.com/dmcgowan/msgpack
+  version: b2a415181d61dad392b5e98e65b0cf7d73e606e7
+- name: github.com/docker/libchan
+  version: 0328dcec840a0659448faf08af087135fffb7fde
+  subpackages:
+  - spdy
+- name: github.com/docker/spdystream
+  version: 449fdfce4d962303d702fec724ef0ad181c92528
+  subpackages:
+  - spdy
+devImports: []
