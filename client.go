@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"io"
 	"log"
 	"net"
@@ -27,17 +26,11 @@ type CommandResponse struct {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("usage: <command> [<arg> ]")
+	if len(os.Args) < 3 {
+		log.Fatal("usage: <socket> <command> [ <args>... ]")
 	}
 
-	var client net.Conn
-	var err error
-	if os.Getenv("USE_TLS") != "" {
-		client, err = tls.Dial("tcp", "127.0.0.1:9323", &tls.Config{InsecureSkipVerify: true})
-	} else {
-		client, err = net.Dial("unix", "/tmp/rexec")
-	}
+	client, err := net.Dial("unix", os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,8 +48,8 @@ func main() {
 	receiver, remoteSender := libchan.Pipe()
 
 	command := &RemoteCommand{
-		Cmd:        os.Args[1],
-		Args:       os.Args[2:],
+		Cmd:        os.Args[2],
+		Args:       os.Args[3:],
 		Stdin:      os.Stdin,
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,

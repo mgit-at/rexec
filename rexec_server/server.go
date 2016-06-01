@@ -1,18 +1,15 @@
 package main
 
 import (
-	"crypto/tls"
 	"io"
 	"log"
 	"net"
-	"os"
 	"os/exec"
 	"syscall"
 
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
-
-	"github.com/coreos/go-systemd/activation"
+	//	"github.com/coreos/go-systemd/activation"
 )
 
 // RemoteCommand is the received command parameters to execute locally and return
@@ -31,38 +28,10 @@ type CommandResponse struct {
 }
 
 func main() {
-	cert := os.Getenv("TLS_CERT")
-	key := os.Getenv("TLS_KEY")
-
-	var listeners []net.Listener
-	var listener net.Listener
-	if cert != "" && key != "" {
-		tlsCert, err := tls.LoadX509KeyPair(cert, key)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: true,
-			Certificates:       []tls.Certificate{tlsCert},
-		}
-
-		listener, err = tls.Listen("tcp", "localhost:9323", tlsConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		var err error
-		//listener, err = net.Listen("unix", "/tmp/rexec")
-		listeners, err = activation.Listeners(true)
-		if err != nil {
-			log.Fatal(err)
-		}
+	listener, err := net.Listen("unix", "/tmp/rexec")
+	if err != nil {
+		log.Fatal(err)
 	}
-	if len(listeners) != 1 {
-		log.Fatal("Unexpected number of socket activation fds")
-	}
-	listener = listeners[0]
 
 	for {
 		c, err := listener.Accept()
@@ -90,7 +59,9 @@ func main() {
 						command := &RemoteCommand{}
 						err := receiver.Receive(command)
 						if err != nil {
-							log.Print(err)
+							if err != io.EOF {
+								log.Print(err)
+							}
 							break
 						}
 
