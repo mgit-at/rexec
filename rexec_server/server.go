@@ -11,6 +11,8 @@ import (
 
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
+
+	"github.com/coreos/go-systemd/activation"
 )
 
 // RemoteCommand is the received command parameters to execute locally and return
@@ -32,6 +34,7 @@ func main() {
 	cert := os.Getenv("TLS_CERT")
 	key := os.Getenv("TLS_KEY")
 
+	var listeners []net.Listener
 	var listener net.Listener
 	if cert != "" && key != "" {
 		tlsCert, err := tls.LoadX509KeyPair(cert, key)
@@ -50,11 +53,16 @@ func main() {
 		}
 	} else {
 		var err error
-		listener, err = net.Listen("tcp", "localhost:9323")
+		//listener, err = net.Listen("unix", "/tmp/rexec")
+		listeners, err = activation.Listeners(true)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	if len(listeners) != 1 {
+		log.Fatal("Unexpected number of socket activation fds")
+	}
+	listener = listeners[0]
 
 	for {
 		c, err := listener.Accept()

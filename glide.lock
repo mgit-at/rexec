@@ -1,6 +1,10 @@
-hash: 2f4a46a2fb62fd5e718ff4588fd658ae1d003c0ce0692e3a59078b4a1bf5b09b
-updated: 2016-05-31T19:22:53.272054026+02:00
+hash: 4df3eedda1f35b54d336bc23f5b48ebd2bdc7d9568e9856b6c5395e6d5827b88
+updated: 2016-05-31T20:41:26.94664028+02:00
 imports:
+- name: github.com/coreos/go-systemd
+  version: 4484981625c1a6a2ecb40a390fcb6a9bcfee76e3
+  subpackages:
+  - activation
 - name: github.com/dmcgowan/msgpack
   version: b2a415181d61dad392b5e98e65b0cf7d73e606e7
 - name: github.com/docker/libchan

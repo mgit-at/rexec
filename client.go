@@ -9,6 +9,8 @@ import (
 
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
+
+	"github.com/coreos/go-systemd/activation"
 )
 
 // RemoteCommand is the run parameters to be executed remotely
@@ -36,7 +38,7 @@ func main() {
 	if os.Getenv("USE_TLS") != "" {
 		client, err = tls.Dial("tcp", "127.0.0.1:9323", &tls.Config{InsecureSkipVerify: true})
 	} else {
-		client, err = net.Dial("tcp", "127.0.0.1:9323")
+		client, err = net.Dial("unix", "/tmp/rexec")
 	}
 	if err != nil {
 		log.Fatal(err)
