@@ -9,8 +9,6 @@ import (
 
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
-
-	"github.com/coreos/go-systemd/activation"
 )
 
 // RemoteCommand is the run parameters to be executed remotely
