@@ -1,0 +1,13 @@
+[Unit]
+Description=rexec server unix socket
+
+[Socket]
+ListenStream=/var/run/rexec
+Accept=true
+RemoveOnStop=true
+SocketUser=<user>
+SocketGroup=<group>
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

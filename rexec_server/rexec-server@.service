@@ -1,0 +1,8 @@
+[Unit]
+Description=rexec-server
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rexec_server
+User=<user>
+Group=<group>
