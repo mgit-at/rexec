@@ -30,8 +30,9 @@ import (
 
 // RemoteCommand is the received command parameters to execute locally and return
 type RemoteCommand struct {
-	Cmd  string
-	Args []string
+	Cmd     string
+	Args    []string
+	WorkDir string
 }
 
 // CommandResponse is the response struct to return to the client
@@ -83,6 +84,11 @@ func main() {
 	d := json.NewDecoder(unixConn)
 	if err := d.Decode(&command); err != nil {
 		log.Fatal("receiving/decoding command: ", err)
+	}
+	if command.WorkDir != "" {
+		if err = os.Chdir(command.WorkDir); err != nil {
+			log.Printf("Warning: unable to change current working directory: %v", err)
+		}
 	}
 
 	cmd := exec.Command(command.Cmd, command.Args...)

@@ -27,8 +27,9 @@ import (
 
 // RemoteCommand is the run parameters to be executed remotely
 type RemoteCommand struct {
-	Cmd  string
-	Args []string
+	Cmd     string
+	Args    []string
+	WorkDir string
 }
 
 // CommandResponse is the returned response object from the remote execution
@@ -50,6 +51,9 @@ func main() {
 	command := &RemoteCommand{
 		Cmd:  os.Args[2],
 		Args: os.Args[3:],
+	}
+	if command.WorkDir, err = os.Getwd(); err != nil {
+		log.Printf("Warning: unable to get current working directory: %v", err)
 	}
 
 	rights := syscall.UnixRights(int(os.Stdin.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd()))
