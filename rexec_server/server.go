@@ -1,25 +1,20 @@
 package main
 
 import (
-	"io"
+	"encoding/json"
 	"log"
 	"net"
+	"os"
 	"os/exec"
 	"syscall"
 
 	"github.com/coreos/go-systemd/activation"
-	"github.com/docker/libchan"
-	"github.com/docker/libchan/spdy"
 )
 
 // RemoteCommand is the received command parameters to execute locally and return
 type RemoteCommand struct {
-	Cmd        string
-	Args       []string
-	Stdin      io.Reader
-	Stdout     io.WriteCloser
-	Stderr     io.WriteCloser
-	StatusChan libchan.Sender
+	Cmd  string
+	Args []string
 }
 
 // CommandResponse is the response struct to return to the client
@@ -38,51 +33,60 @@ func main() {
 		log.Fatal(err)
 	}
 
-	p, err := spdy.NewSpdyStreamProvider(conn, true)
+	unixConn, ok := conn.(*net.UnixConn)
+	if !ok {
+		log.Fatalf("got invalid socket type from systemd: %T\n", conn)
+	}
+
+	b := make([]byte, 8192)  // TODO: hardcoded value...
+	oob := make([]byte, 128) // TODO: hardcoded value...
+	bn, oobn, _, _, err := unixConn.ReadMsgUnix(b, oob)
+
+	var command RemoteCommand
+	if err := json.Unmarshal(b[:bn], &command); err != nil {
+		log.Fatal(err)
+	}
+
+	scms, err := syscall.ParseSocketControlMessage(oob[:oobn])
 	if err != nil {
 		log.Fatal(err)
 	}
-	t := spdy.NewTransport(p)
+	if len(scms) != 1 {
+		log.Fatalf("expected 1 SocketControlMessage, got %d", len(scms))
+	}
 
-	receiver, err := t.WaitReceiveChannel()
+	scm := scms[0]
+	fds, err := syscall.ParseUnixRights(&scm)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	command := &RemoteCommand{}
-	err = receiver.Receive(command)
-	if err != nil {
-		log.Fatal(err)
+	if len(fds) != 3 {
+		log.Fatalf("wanted 3 file descriptors, got %d", len(fds))
 	}
 
 	cmd := exec.Command(command.Cmd, command.Args...)
-	cmd.Stdout = command.Stdout
-	cmd.Stderr = command.Stderr
+	cmd.Stdin = os.NewFile(uintptr(fds[0]), "stdin")
+	cmd.Stdout = os.NewFile(uintptr(fds[1]), "stdout")
+	cmd.Stderr = os.NewFile(uintptr(fds[2]), "stderr")
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	go func() {
-		io.Copy(stdin, command.Stdin)
-		stdin.Close()
-	}()
-
-	res := cmd.Run()
-	command.Stdout.Close()
-	command.Stderr.Close()
-	returnResult := &CommandResponse{}
-	if res != nil {
+	result := &CommandResponse{}
+	if res := cmd.Run(); res != nil {
 		if exiterr, ok := res.(*exec.ExitError); ok {
-			returnResult.Status = exiterr.Sys().(syscall.WaitStatus).ExitStatus()
+			result.Status = exiterr.Sys().(syscall.WaitStatus).ExitStatus()
 		} else {
 			log.Print(res)
-			returnResult.Status = 10
+			result.Status = 10
 		}
 	}
 
-	err = command.StatusChan.Send(returnResult)
+	resultJSON, err := json.Marshal(result)
 	if err != nil {
-		log.Print(err)
+		log.Fatal(err)
+	}
+
+	if n, err := unixConn.Write(resultJSON); err != nil {
+		log.Fatal(err)
+	} else if n != len(resultJSON) {
+		log.Fatal(err)
 	}
 }

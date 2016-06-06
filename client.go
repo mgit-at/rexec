@@ -1,23 +1,17 @@
 package main
 
 import (
-	"io"
+	"encoding/json"
 	"log"
 	"net"
 	"os"
-
-	"github.com/docker/libchan"
-	"github.com/docker/libchan/spdy"
+	"syscall"
 )
 
 // RemoteCommand is the run parameters to be executed remotely
 type RemoteCommand struct {
-	Cmd        string
-	Args       []string
-	Stdin      io.Writer
-	Stdout     io.Reader
-	Stderr     io.Reader
-	StatusChan libchan.Sender
+	Cmd  string
+	Args []string
 }
 
 // CommandResponse is the returned response object from the remote execution
@@ -30,40 +24,34 @@ func main() {
 		log.Fatal("usage: <socket> <command> [ <args>... ]")
 	}
 
-	client, err := net.Dial("unix", os.Args[1])
+	conn, err := net.Dial("unix", os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	p, err := spdy.NewSpdyStreamProvider(client, false)
-	if err != nil {
-		log.Fatal(err)
-	}
-	transport := spdy.NewTransport(p)
-	sender, err := transport.NewSendChannel()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	receiver, remoteSender := libchan.Pipe()
+	unixConn := conn.(*net.UnixConn)
 
 	command := &RemoteCommand{
-		Cmd:        os.Args[2],
-		Args:       os.Args[3:],
-		Stdin:      os.Stdin,
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
-		StatusChan: remoteSender,
+		Cmd:  os.Args[2],
+		Args: os.Args[3:],
 	}
 
-	err = sender.Send(command)
+	cmdJSON, err := json.Marshal(command)
 	if err != nil {
 		log.Fatal(err)
 	}
+	rights := syscall.UnixRights(int(os.Stdin.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd()))
 
-	response := &CommandResponse{}
-	err = receiver.Receive(response)
-	if err != nil {
+	if bn, oobn, err := unixConn.WriteMsgUnix(cmdJSON, rights, nil); err != nil {
+		log.Fatal(err)
+	} else if bn != len(cmdJSON) {
+		log.Fatal("Error sending command via unix socket")
+	} else if oobn != len(rights) {
+		log.Fatal("Error sending file descriptors via unix socket")
+	}
+
+	var response CommandResponse
+	d := json.NewDecoder(unixConn)
+	if err := d.Decode(&response); err != nil {
 		log.Fatal(err)
 	}
 

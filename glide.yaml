@@ -3,6 +3,3 @@ import:
 - package: github.com/coreos/go-systemd
   subpackages:
   - activation
-- package: github.com/docker/libchan
-  subpackages:
-  - spdy
