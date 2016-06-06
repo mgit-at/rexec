@@ -38,18 +38,16 @@ func main() {
 		log.Fatalf("got invalid socket type from systemd: %T\n", conn)
 	}
 
-	b := make([]byte, 8192)  // TODO: hardcoded value...
-	oob := make([]byte, 128) // TODO: hardcoded value...
-	bn, oobn, _, _, err := unixConn.ReadMsgUnix(b, oob)
-
-	var command RemoteCommand
-	if err := json.Unmarshal(b[:bn], &command); err != nil {
-		log.Fatal(err)
+	b := make([]byte, 1)     // the client sends the OOB message together with one dummy byte
+	oob := make([]byte, 128) // OOB should be 32 bytes
+	_, oobn, _, _, err := unixConn.ReadMsgUnix(b, oob)
+	if err != nil {
+		log.Fatal("ReadMsgUnix(): ", err)
 	}
 
 	scms, err := syscall.ParseSocketControlMessage(oob[:oobn])
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("ParseSocketControlMessage(): ", err)
 	}
 	if len(scms) != 1 {
 		log.Fatalf("expected 1 SocketControlMessage, got %d", len(scms))
@@ -58,10 +56,16 @@ func main() {
 	scm := scms[0]
 	fds, err := syscall.ParseUnixRights(&scm)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("ParseUnixRights: ", err)
 	}
 	if len(fds) != 3 {
 		log.Fatalf("wanted 3 file descriptors, got %d", len(fds))
+	}
+
+	var command RemoteCommand
+	d := json.NewDecoder(unixConn)
+	if err := d.Decode(&command); err != nil {
+		log.Fatal("receiving/decoding command: ", err)
 	}
 
 	cmd := exec.Command(command.Cmd, command.Args...)
@@ -79,14 +83,8 @@ func main() {
 		}
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if n, err := unixConn.Write(resultJSON); err != nil {
-		log.Fatal(err)
-	} else if n != len(resultJSON) {
-		log.Fatal(err)
+	e := json.NewEncoder(unixConn)
+	if err := e.Encode(result); err != nil {
+		log.Fatal("encoding/sending result: ", err)
 	}
 }

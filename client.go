@@ -35,24 +35,22 @@ func main() {
 		Args: os.Args[3:],
 	}
 
-	cmdJSON, err := json.Marshal(command)
-	if err != nil {
-		log.Fatal(err)
-	}
 	rights := syscall.UnixRights(int(os.Stdin.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd()))
-
-	if bn, oobn, err := unixConn.WriteMsgUnix(cmdJSON, rights, nil); err != nil {
+	if _, oobn, err := unixConn.WriteMsgUnix([]byte{0}, rights, nil); err != nil { // send at least 1 byte of payload
 		log.Fatal(err)
-	} else if bn != len(cmdJSON) {
-		log.Fatal("Error sending command via unix socket")
 	} else if oobn != len(rights) {
-		log.Fatal("Error sending file descriptors via unix socket")
+		log.Fatal("Error sending file descriptors via unix socket failed: short write")
+	}
+
+	e := json.NewEncoder(unixConn)
+	if err := e.Encode(command); err != nil {
+		log.Fatal("encoding/sending command: ", err)
 	}
 
 	var response CommandResponse
 	d := json.NewDecoder(unixConn)
 	if err := d.Decode(&response); err != nil {
-		log.Fatal(err)
+		log.Fatal("receiving/decoding result: ", err)
 	}
 
 	os.Exit(response.Status)
