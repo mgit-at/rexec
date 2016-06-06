@@ -1,3 +1,7 @@
 rexec
 rexec_server/rexec_server
 cache/
+debian/debhelper-build-stamp
+debian/files
+debian/rexec.debhelper.log
+debian/rexec.substvars

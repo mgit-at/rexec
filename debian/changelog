@@ -1,3 +1,9 @@
+rexec (0.0~git20160606-2) unstable; urgency=medium
+
+  * also propagate current working directory
+
+ -- Christian Pointner <equinox@spreadspace.org>  Mon, 06 Jun 2016 19:18:36 +0200
+
 rexec (0.0~git20160606-1) unstable; urgency=medium
 
   * Initial release.
