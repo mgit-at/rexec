@@ -30,4 +30,7 @@ clean-all: clean
 update:
 	glide update -u -s -v --cache
 
+deb: all
+	eatmydata debuild -I -us -uc
+
 .PHONY: bin clean all clean-all update deb

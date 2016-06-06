@@ -1,0 +1,14 @@
+Source: rexec
+Maintainer: Christian Pointner <cpointner@mgit.at>
+Build-Depends: debhelper (>= 9.0.0), git
+Standards-Version: 3.9.6
+Priority: extra
+Section: admin
+
+Package: rexec
+Priority: extra
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: execute commands via unix sockets and fd passing
+ rexec implements a simple remoite execution environment using unix sockets
+ and filedescriptor passing.
